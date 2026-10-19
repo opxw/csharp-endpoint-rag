@@ -1,0 +1,94 @@
+using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Mvc;
+namespace SampleApi;
+
+public static class Routes { public const string Prefix = "api/[controller]"; }
+public record Query(int Page, int PageSize);
+public record Employee(string Name, decimal Balance);
+public record PageResult(List<Employee> Rows, int TotalRows);
+public sealed class AppResult
+{
+    public bool Result { get; init; }
+    public object? Data { get; set; }
+    public string? Message { get; init; }
+    public int Source { get; init; }
+}
+public sealed class EmployeeService
+{
+    /// <summary>Returns a paginated employee directory.</summary>
+    public Task<PageResult> GetAsync(Query query, CancellationToken token) => Task.FromResult(new PageResult([], 0));
+    public Task<AppResult> WrappedAsync(Query query) => ExecuteAsync(() => Success(new PageResult([], 0)));
+    private Task<AppResult> ExecuteAsync(Func<AppResult> action) => Task.FromResult(action());
+    private AppResult Success(object data) => new() { Result = true, Data = data };
+}
+
+/// <summary>Employee directory and balance information for the authenticated team.</summary>
+[Route(Routes.Prefix)]
+[ApiController]
+[Authorize(Policy = "TeamReader")]
+public sealed class EmployeesController : ControllerBase
+{
+    private readonly EmployeeService _service = new();
+    /// <summary>Read the paginated directory for the caller's team.</summary>
+    [HttpGet("team")]
+    [HttpGet("members")]
+    public Task<PageResult> Team([FromQuery] Query request, CancellationToken cancellation) => _service.GetAsync(request, cancellation);
+
+    /// <summary>Read the employee with the supplied ID.</summary>
+    [HttpGet("{id:int}")]
+    [ProducesResponseType(typeof(Employee), 200)]
+    public IActionResult Get([FromRoute(Name = "id")] int employeeId) => Ok(new Employee("SYNTHETIC_LITERAL_SHOULD_NOT_LEAK", 0));
+
+    /// <summary>Read public metadata.</summary>
+    [HttpGet("~/health")]
+    [AllowAnonymous]
+    public string Health() => "healthy";
+
+    /// <summary>Query the employee directory via a read-only POST.</summary>
+    [HttpPost("query")]
+    public Task QueryPost([FromBody] Query request) => OkOrFailAsync(_service.GetAsync(request, default));
+    private Task OkOrFailAsync<T>(Task<T> result) => Task.CompletedTask;
+    private Task OkOrFailAsync(AppResult result) => Task.CompletedTask;
+
+    /// <summary>Read through an OPX envelope with a local response variable.</summary>
+    [HttpPost("wrapped")]
+    public async Task Wrapped([FromBody] Query request)
+    {
+        var response = await _service.WrappedAsync(request);
+        await OkOrFailAsync(response);
+    }
+
+    /// <summary>Read an explicit AppResult.Data initializer.</summary>
+    [HttpGet("data-initializer")]
+    public AppResult DataInitializer() => new() { Result = true, Data = new Employee("example", 0), Message = "ok" };
+
+    /// <summary>Read an explicit AppResult.Data assignment.</summary>
+    [HttpGet("data-assignment")]
+    public AppResult DataAssignment()
+    {
+        var result = new AppResult { Result = true };
+        result.Data = new PageResult([], 0);
+        return result;
+    }
+
+    [NonAction]
+    [HttpGet("not-an-action")]
+    public string Helper() => "helper";
+}
+
+[Route("empty")]
+/// <summary>Controller documented between attribute lists without actions.</summary>
+[ApiController]
+public sealed class EmptyController : ControllerBase { }
+
+public abstract class SecuredController : ControllerBase
+{
+    /// <summary>Inherited action.</summary>
+    [HttpGet("inherited")]
+    public Employee Inherited() => new("example", 0);
+}
+
+/// <summary>Derived controller summary.</summary>
+[Route("derived")]
+[Authorize]
+public sealed class DerivedController : SecuredController { }

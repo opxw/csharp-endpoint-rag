@@ -1,0 +1,9 @@
+<Solution>
+  <Folder Name="/src/">
+    <Project Path="src/EndpointRag.Core/EndpointRag.Core.csproj" />
+    <Project Path="src/EndpointRag.WinForms/EndpointRag.WinForms.csproj" />
+  </Folder>
+  <Folder Name="/tests/">
+    <Project Path="tests/EndpointRag.Verification/EndpointRag.Verification.csproj" />
+  </Folder>
+</Solution>
