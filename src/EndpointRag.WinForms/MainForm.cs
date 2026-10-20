@@ -18,7 +18,7 @@ public sealed class MainForm : Form
     private readonly Label _knowledgeLabel = new() { Text = "Belum ada dokumen knowledge", AutoSize = true, Padding = new(0, 8, 0, 0) };
     private readonly DataGridView _grid = new() { Dock = DockStyle.Fill, AutoGenerateColumns = false, AllowUserToAddRows = false,
         AllowUserToDeleteRows = false, RowHeadersVisible = false, MultiSelect = false, SelectionMode = DataGridViewSelectionMode.FullRowSelect,
-        BackgroundColor = Color.White, BorderStyle = BorderStyle.None, AutoSizeRowsMode = DataGridViewAutoSizeRowsMode.None, RowTemplate = { Height = 30 } };
+        BackgroundColor = Color.White, BorderStyle = BorderStyle.None, AutoSizeRowsMode = DataGridViewAutoSizeRowsMode.DisplayedCells, RowTemplate = { Height = 30, MinimumHeight = 30 } };
     private readonly TextBox _json = Preview();
     private readonly TextBox _prompt = Preview();
     private readonly TextBox _knowledgePreview = Preview();
@@ -116,8 +116,9 @@ public sealed class MainForm : Form
         AddColumn("Selected", "Pilih", 45, true); AddColumn("Method", "HTTP", 65);
         AddColumn("Path", "Route", 260);
         AddColumn("Description", "Deskripsi", 320);
+        _grid.Columns[_grid.Columns.Count - 1].DefaultCellStyle.WrapMode = DataGridViewTriState.True;
+        _grid.Columns[_grid.Columns.Count - 1].DefaultCellStyle.Alignment = DataGridViewContentAlignment.TopLeft;
         AddColumn("Parameters", "Parameter endpoint", 320);
-        AddColumn("Resolution", "Resolusi tipe", 180);
         AddColumn("Action", "Action", 180);
         _grid.ShowCellToolTips = true;
         _grid.CellToolTipTextNeeded += (_, e) =>
